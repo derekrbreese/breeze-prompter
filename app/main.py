@@ -5,11 +5,11 @@ from app.api import router
 
 # Create FastAPI app
 app = FastAPI(
-    title="Breese Prompter API",
+    title="Breeze Prompter API",
     description="An AI-powered prompt enhancement service that analyzes and improves prompts for maximum effectiveness",
     version="1.0.0",
     servers=[
-        {"url": "https://api.breese-prompter.com", "description": "Production server"},
+        {"url": "https://breeze-prompter.onrender.com", "description": "Production server"},
         {"url": "http://localhost:8000", "description": "Development server"}
     ]
 )
@@ -30,7 +30,7 @@ app.include_router(router, prefix="/api")
 @app.get("/")
 async def root():
     return {
-        "name": "Breese Prompter API",
+        "name": "Breeze Prompter API",
         "version": "1.0.0",
         "description": "AI-powered prompt enhancement service",
         "documentation": "/docs",
@@ -43,10 +43,10 @@ def custom_openapi():
         return app.openapi_schema
     
     openapi_schema = get_openapi(
-        title="Breese Prompter API",
+        title="Breeze Prompter API",
         version="1.0.0",
         description="""
-# Breese Prompter API
+# Breeze Prompter API
 
 An AI-powered service that analyzes and enhances prompts to make them more effective for AI systems.
 

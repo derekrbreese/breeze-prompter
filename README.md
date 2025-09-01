@@ -1,4 +1,4 @@
-# Breese Prompter - AI Prompt Enhancement API
+# Breeze Prompter - AI Prompt Enhancement API
 
 An AI-powered service that analyzes and enhances prompts to make them more effective for AI systems. Perfect for use as a custom GPT action.
 

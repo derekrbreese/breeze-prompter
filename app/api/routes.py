@@ -80,14 +80,20 @@ async def gpt_enhance_prompt(request: GPTPromptRequest) -> GPTPromptResponse:
                 detail="Prompt must be at least 5 characters long"
             )
         
-        # Combine prompt with document context if provided
-        full_prompt = request.prompt
+        # Handle document context intelligently
         if request.document_context:
-            full_prompt = f"Context: {request.document_context}\n\nPrompt: {request.prompt}"
+            # For prompts with document context, create a focused enhancement
+            enhanced_prompt = await enhancer.enhance_with_document(
+                prompt=request.prompt,
+                document=request.document_context,
+                context=request.context,
+                style=request.style
+            )
+            return GPTPromptResponse(enhanced_prompt=enhanced_prompt)
         
-        # Create a full request for the enhancer
+        # For regular prompts without documents
         full_request = PromptRequest(
-            prompt=full_prompt,
+            prompt=request.prompt,
             context=request.context,
             style=request.style,
             include_examples=False,

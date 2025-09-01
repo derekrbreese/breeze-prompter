@@ -436,3 +436,64 @@ Make it clearer and more specific, but keep it simple."""
                 "explanation": "Added request for more details",
                 "tips": ["Be more specific about your requirements"]
             }
+    
+    async def enhance_with_document(
+        self,
+        prompt: str,
+        document: str,
+        context: PromptContext,
+        style: PromptStyle
+    ) -> str:
+        """
+        Enhance a prompt that includes document context
+        Returns a simple, clear enhanced prompt without complex scaffolding
+        """
+        system_message = """You are a prompt enhancement specialist. When a user provides a document with their request, create a clear, actionable prompt that incorporates both.
+
+IMPORTANT RULES:
+1. Create a SINGLE, CLEAR prompt that combines the user's request with the document
+2. Do NOT use placeholder tags like <<<AUDIENCE>>> or <<<PURPOSE>>>
+3. Do NOT create templates or forms for the user to fill out
+4. Do NOT add complex scaffolding or multiple sections
+5. Keep it conversational and natural
+
+Return ONLY the enhanced prompt text, no JSON, no explanation."""
+        
+        # Truncate document if too long (keep first 2000 chars)
+        doc_preview = document[:2000] + "..." if len(document) > 2000 else document
+        
+        user_message = f"""User's request: "{prompt}"
+
+Document provided:
+{doc_preview}
+
+Create a single, clear enhanced prompt that asks for the specific action on this specific document. Make it natural and actionable."""
+        
+        messages = [
+            {"role": "system", "content": system_message},
+            {"role": "user", "content": user_message}
+        ]
+        
+        response = await self.client.chat_completion(messages, temperature=0.3)
+        
+        # Clean up the response
+        enhanced = response.strip()
+        
+        # Remove any JSON formatting if present
+        if enhanced.startswith("{") and "enhanced_prompt" in enhanced:
+            try:
+                import json
+                data = json.loads(enhanced)
+                enhanced = data.get("enhanced_prompt", enhanced)
+            except:
+                pass
+        
+        # Ensure it's actually about the document
+        if document[:100] not in enhanced and len(document) > 100:
+            # If the document content isn't referenced, create a simple enhancement
+            action = prompt.lower().rstrip('.')
+            if action.startswith("improve"):
+                action = "review and improve"
+            enhanced = f"Please {action} the following document:\n\n{doc_preview}\n\nFocus on clarity, accuracy, and maintaining the original intent while improving readability."
+        
+        return enhanced

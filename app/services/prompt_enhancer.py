@@ -446,54 +446,47 @@ Make it clearer and more specific, but keep it simple."""
     ) -> str:
         """
         Enhance a prompt that includes document context
-        Returns a simple, clear enhanced prompt without complex scaffolding
+        The document is provided as context, and we enhance the prompt to work WITH that context
         """
-        system_message = """You are a prompt enhancement specialist. When a user provides a document with their request, create a clear, actionable prompt that incorporates both.
+        # Determine what the user is trying to do with the document
+        action_keywords = {
+            "improve": "Review and enhance the provided text for clarity and impact",
+            "summarize": "Create a concise summary of the key points",
+            "analyze": "Provide a detailed analysis of the content",
+            "edit": "Edit for grammar, style, and coherence",
+            "rewrite": "Rewrite the content for better clarity and flow",
+            "review": "Provide feedback and suggestions for improvement",
+            "translate": "Translate the content accurately",
+            "explain": "Explain the main concepts in simpler terms"
+        }
+        
+        prompt_lower = prompt.lower()
+        
+        # Find the best action match
+        action_found = None
+        for keyword, enhanced_action in action_keywords.items():
+            if keyword in prompt_lower:
+                action_found = enhanced_action
+                break
+        
+        # If no specific action found, create a generic enhancement
+        if not action_found:
+            if len(prompt.split()) < 3:
+                action_found = "Process and improve the provided document"
+            else:
+                action_found = prompt
+        
+        # Build the enhanced prompt that will work WITH the document as context
+        # The key is that the document is ALREADY PROVIDED as context
+        enhanced = f"""Given the document provided as context, please {action_found}.
 
-IMPORTANT RULES:
-1. Create a SINGLE, CLEAR prompt that combines the user's request with the document
-2. Do NOT use placeholder tags like <<<AUDIENCE>>> or <<<PURPOSE>>>
-3. Do NOT create templates or forms for the user to fill out
-4. Do NOT add complex scaffolding or multiple sections
-5. Keep it conversational and natural
+Document context to work with:
+{document}
 
-Return ONLY the enhanced prompt text, no JSON, no explanation."""
-        
-        # Truncate document if too long (keep first 2000 chars)
-        doc_preview = document[:2000] + "..." if len(document) > 2000 else document
-        
-        user_message = f"""User's request: "{prompt}"
-
-Document provided:
-{doc_preview}
-
-Create a single, clear enhanced prompt that asks for the specific action on this specific document. Make it natural and actionable."""
-        
-        messages = [
-            {"role": "system", "content": system_message},
-            {"role": "user", "content": user_message}
-        ]
-        
-        response = await self.client.chat_completion(messages, temperature=0.3)
-        
-        # Clean up the response
-        enhanced = response.strip()
-        
-        # Remove any JSON formatting if present
-        if enhanced.startswith("{") and "enhanced_prompt" in enhanced:
-            try:
-                import json
-                data = json.loads(enhanced)
-                enhanced = data.get("enhanced_prompt", enhanced)
-            except:
-                pass
-        
-        # Ensure it's actually about the document
-        if document[:100] not in enhanced and len(document) > 100:
-            # If the document content isn't referenced, create a simple enhancement
-            action = prompt.lower().rstrip('.')
-            if action.startswith("improve"):
-                action = "review and improve"
-            enhanced = f"Please {action} the following document:\n\n{doc_preview}\n\nFocus on clarity, accuracy, and maintaining the original intent while improving readability."
+Requirements:
+- Focus on {context.value} quality and {style.value} style
+- Maintain accuracy and original intent
+- Provide clear, actionable output
+- Be specific and thorough in your response"""
         
         return enhanced

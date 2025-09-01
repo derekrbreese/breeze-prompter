@@ -1,0 +1,587 @@
+{
+    "openapi": "3.1.0",
+    "info": {
+        "title": "Breeze Prompter API",
+        "description": "\n# Breeze Prompter API\n\nAn AI-powered service that analyzes and enhances prompts to make them more effective for AI systems.\n\n## Features\n- **Prompt Analysis**: Identifies ambiguities, missing information, and areas for improvement\n- **Smart Enhancement**: Generates optimized versions with better clarity and specificity\n- **Document Context**: Supports additional context from documents for more accurate enhancements\n- **Scoring System**: Rates prompts on clarity, specificity, and completeness\n- **Context-Aware**: Tailors enhancements based on domain (coding, writing, analysis, etc.)\n- **Style Options**: Supports different output styles (concise, detailed, technical, conversational)\n- **GPT Custom Action Support**: Simplified endpoint for ChatGPT custom actions\n\n## Endpoints\n\n### For GPT Custom Actions\n- **POST `/api/gpt-enhance`**: Simplified endpoint that returns only the enhanced prompt\n  - Accepts document context for additional information\n  - Returns a single enhanced prompt string\n  - Perfect for ChatGPT custom actions\n\n### For Full Analysis\n- **POST `/api/perfect-prompt`**: Full analysis with scores and explanations\n\n## Authentication\nAPI key required in header: `X-API-Key: your-api-key`\n\n## Usage\nFor GPT custom actions, use `/api/gpt-enhance` to get just the enhanced prompt.\nFor full analysis, use `/api/perfect-prompt` to get detailed feedback.\n",
+        "version": "1.0.0"
+    },
+    "servers": [
+        {
+            "url": "https://breeze-prompter.onrender.com",
+            "description": "Production server (Render)"
+        },
+        {
+            "url": "http://localhost:8000",
+            "description": "Development server"
+        },
+        {
+            "url": "http://localhost:8002",
+            "description": "Alternative development server"
+        }
+    ],
+    "paths": {
+        "/api/perfect-prompt": {
+            "post": {
+                "summary": "Perfect a prompt",
+                "description": "Analyzes and enhances a prompt to make it more effective for AI systems",
+                "operationId": "perfect_prompt_api_perfect_prompt_post",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PromptRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PromptResponse"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/gpt-enhance": {
+            "post": {
+                "summary": "Enhance prompt for GPT (simplified)",
+                "description": "Simplified endpoint for GPT custom actions - returns only the enhanced prompt",
+                "operationId": "gpt_enhance_prompt_api_gpt_enhance_post",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/GPTPromptRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/GPTPromptResponse"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/health": {
+            "get": {
+                "summary": "Health check",
+                "description": "Check if the API is running",
+                "operationId": "health_check_api_health_get",
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {}
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ]
+            }
+        },
+        "/": {
+            "get": {
+                "summary": "Root",
+                "operationId": "root__get",
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {}
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ]
+            }
+        }
+    },
+    "components": {
+        "schemas": {
+            "ErrorResponse": {
+                "properties": {
+                    "error": {
+                        "type": "string",
+                        "title": "Error",
+                        "description": "Error message"
+                    },
+                    "detail": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Detail",
+                        "description": "Detailed error information"
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "error"
+                ],
+                "title": "ErrorResponse"
+            },
+            "GPTPromptRequest": {
+                "properties": {
+                    "prompt": {
+                        "type": "string",
+                        "title": "Prompt",
+                        "description": "The prompt to enhance"
+                    },
+                    "document_context": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Document Context",
+                        "description": "Additional document context to consider when enhancing the prompt"
+                    },
+                    "context": {
+                        "anyOf": [
+                            {
+                                "$ref": "#/components/schemas/PromptContext"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "description": "The domain context (coding, writing, analysis, etc.)",
+                        "default": "general"
+                    },
+                    "style": {
+                        "anyOf": [
+                            {
+                                "$ref": "#/components/schemas/PromptStyle"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "description": "Output style preference",
+                        "default": "detailed"
+                    },
+                    "fetch_current_info": {
+                        "anyOf": [
+                            {
+                                "type": "boolean"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Fetch Current Info",
+                        "description": "Fetch current information for time-sensitive queries",
+                        "default": false
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "prompt"
+                ],
+                "title": "GPTPromptRequest",
+                "description": "Simplified request for GPT custom actions"
+            },
+            "GPTPromptResponse": {
+                "properties": {
+                    "enhanced_prompt": {
+                        "type": "string",
+                        "title": "Enhanced Prompt",
+                        "description": "The enhanced, optimized prompt"
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "enhanced_prompt"
+                ],
+                "title": "GPTPromptResponse",
+                "description": "Simplified response for GPT custom actions - just the enhanced prompt"
+            },
+            "HTTPValidationError": {
+                "properties": {
+                    "detail": {
+                        "items": {
+                            "$ref": "#/components/schemas/ValidationError"
+                        },
+                        "type": "array",
+                        "title": "Detail"
+                    }
+                },
+                "type": "object",
+                "title": "HTTPValidationError"
+            },
+            "Improvement": {
+                "properties": {
+                    "category": {
+                        "type": "string",
+                        "title": "Category",
+                        "description": "The category of improvement"
+                    },
+                    "description": {
+                        "type": "string",
+                        "title": "Description",
+                        "description": "Description of the improvement"
+                    },
+                    "before": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Before",
+                        "description": "The original text"
+                    },
+                    "after": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "After",
+                        "description": "The improved text"
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "category",
+                    "description"
+                ],
+                "title": "Improvement"
+            },
+            "PromptContext": {
+                "type": "string",
+                "enum": [
+                    "coding",
+                    "writing",
+                    "analysis",
+                    "creative",
+                    "technical",
+                    "general"
+                ],
+                "title": "PromptContext"
+            },
+            "PromptRequest": {
+                "properties": {
+                    "prompt": {
+                        "type": "string",
+                        "title": "Prompt",
+                        "description": "The original prompt to be enhanced"
+                    },
+                    "context": {
+                        "anyOf": [
+                            {
+                                "$ref": "#/components/schemas/PromptContext"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "description": "The domain or context for the prompt",
+                        "default": "general"
+                    },
+                    "style": {
+                        "anyOf": [
+                            {
+                                "$ref": "#/components/schemas/PromptStyle"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "description": "The preferred style for the enhanced prompt",
+                        "default": "detailed"
+                    },
+                    "include_examples": {
+                        "anyOf": [
+                            {
+                                "type": "boolean"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Include Examples",
+                        "description": "Whether to include examples in the enhanced prompt",
+                        "default": false
+                    },
+                    "fetch_current_knowledge": {
+                        "anyOf": [
+                            {
+                                "type": "boolean"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Fetch Current Knowledge",
+                        "description": "Whether to fetch current information from web search for time-sensitive topics",
+                        "default": false
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "prompt"
+                ],
+                "title": "PromptRequest"
+            },
+            "PromptResponse": {
+                "properties": {
+                    "original_prompt": {
+                        "type": "string",
+                        "title": "Original Prompt",
+                        "description": "The original input prompt"
+                    },
+                    "enhanced_prompt": {
+                        "type": "string",
+                        "title": "Enhanced Prompt",
+                        "description": "The optimized version of the prompt"
+                    },
+                    "improvements": {
+                        "items": {
+                            "$ref": "#/components/schemas/Improvement"
+                        },
+                        "type": "array",
+                        "title": "Improvements",
+                        "description": "List of specific improvements made"
+                    },
+                    "explanation": {
+                        "type": "string",
+                        "title": "Explanation",
+                        "description": "Explanation of why the enhanced version is more effective"
+                    },
+                    "score_before": {
+                        "$ref": "#/components/schemas/PromptScore",
+                        "description": "Score of the original prompt"
+                    },
+                    "score_after": {
+                        "$ref": "#/components/schemas/PromptScore",
+                        "description": "Score of the enhanced prompt"
+                    },
+                    "tips": {
+                        "anyOf": [
+                            {
+                                "items": {
+                                    "type": "string"
+                                },
+                                "type": "array"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Tips",
+                        "description": "Additional tips for future prompts"
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "original_prompt",
+                    "enhanced_prompt",
+                    "improvements",
+                    "explanation",
+                    "score_before",
+                    "score_after"
+                ],
+                "title": "PromptResponse"
+            },
+            "PromptScore": {
+                "properties": {
+                    "clarity": {
+                        "type": "integer",
+                        "maximum": 100.0,
+                        "minimum": 0.0,
+                        "title": "Clarity",
+                        "description": "Clarity score (0-100)"
+                    },
+                    "specificity": {
+                        "type": "integer",
+                        "maximum": 100.0,
+                        "minimum": 0.0,
+                        "title": "Specificity",
+                        "description": "Specificity score (0-100)"
+                    },
+                    "completeness": {
+                        "type": "integer",
+                        "maximum": 100.0,
+                        "minimum": 0.0,
+                        "title": "Completeness",
+                        "description": "Completeness score (0-100)"
+                    },
+                    "overall": {
+                        "type": "integer",
+                        "maximum": 100.0,
+                        "minimum": 0.0,
+                        "title": "Overall",
+                        "description": "Overall effectiveness score (0-100)"
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "clarity",
+                    "specificity",
+                    "completeness",
+                    "overall"
+                ],
+                "title": "PromptScore"
+            },
+            "PromptStyle": {
+                "type": "string",
+                "enum": [
+                    "concise",
+                    "detailed",
+                    "technical",
+                    "conversational"
+                ],
+                "title": "PromptStyle"
+            },
+            "ValidationError": {
+                "properties": {
+                    "loc": {
+                        "items": {
+                            "anyOf": [
+                                {
+                                    "type": "string"
+                                },
+                                {
+                                    "type": "integer"
+                                }
+                            ]
+                        },
+                        "type": "array",
+                        "title": "Location"
+                    },
+                    "msg": {
+                        "type": "string",
+                        "title": "Message"
+                    },
+                    "type": {
+                        "type": "string",
+                        "title": "Error Type"
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "loc",
+                    "msg",
+                    "type"
+                ],
+                "title": "ValidationError"
+            }
+        },
+        "securitySchemes": {
+            "ApiKeyAuth": {
+                "type": "apiKey",
+                "in": "header",
+                "name": "X-API-Key"
+            }
+        }
+    }
+}

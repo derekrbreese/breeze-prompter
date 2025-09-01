@@ -30,7 +30,9 @@ class OpenRouterClient:
         """
         Make a chat completion request to OpenRouter API
         """
-        async with httpx.AsyncClient(timeout=30.0) as client:
+        # Use longer timeout for complex requests
+        timeout = httpx.Timeout(60.0, connect=10.0)
+        async with httpx.AsyncClient(timeout=timeout) as client:
             payload = {
                 "model": model,
                 "messages": messages,

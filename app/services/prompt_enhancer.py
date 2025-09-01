@@ -10,6 +10,7 @@ from app.models import (
     PromptStyle
 )
 from app.services.knowledge_updater import SmartKnowledgeIntegration
+from app.services.role_detector import RoleDetector
 
 
 class PromptEnhancer:
@@ -21,17 +22,42 @@ class PromptEnhancer:
         """
         Main method to enhance a prompt using AI
         """
-        # First, analyze the original prompt
-        analysis = await self._analyze_prompt(request.prompt, request.context)
+        # Check complexity level to optimize API calls
+        complexity = RoleDetector.get_complexity_level(request.prompt)
         
-        # Generate the enhanced prompt
-        enhanced = await self._generate_enhanced_prompt(
-            request.prompt,
-            analysis,
-            request.context,
-            request.style,
-            request.include_examples
-        )
+        # For simple prompts, skip detailed analysis
+        if complexity == "simple":
+            # Generate a simple enhancement without deep analysis
+            enhanced = await self._generate_simple_enhancement(
+                request.prompt,
+                request.context,
+                request.style
+            )
+            analysis = {"intent": "simple query", "ambiguities": [], "missing_elements": [], "strengths": [], "context_gaps": []}
+            # Use estimated scores for simple prompts
+            score_before = PromptScore(clarity=60, specificity=50, completeness=50, overall=53)
+            score_after = PromptScore(clarity=90, specificity=85, completeness=85, overall=87)
+        else:
+            # Full analysis for moderate/complex prompts
+            analysis = await self._analyze_prompt(request.prompt, request.context)
+            
+            # Generate the enhanced prompt
+            enhanced = await self._generate_enhanced_prompt(
+                request.prompt,
+                analysis,
+                request.context,
+                request.style,
+                request.include_examples
+            )
+            
+            # Score both prompts only for complex cases
+            if complexity == "complex":
+                score_before = await self._score_prompt(request.prompt)
+                score_after = await self._score_prompt(enhanced["enhanced_prompt"])
+            else:
+                # Estimated scores for moderate complexity
+                score_before = PromptScore(clarity=70, specificity=65, completeness=60, overall=65)
+                score_after = PromptScore(clarity=85, specificity=80, completeness=80, overall=82)
         
         # Integrate current knowledge if requested
         if request.fetch_current_knowledge:
@@ -40,10 +66,6 @@ class PromptEnhancer:
                 enhanced["enhanced_prompt"],
                 request.context
             )
-        
-        # Score both prompts
-        score_before = await self._score_prompt(request.prompt)
-        score_after = await self._score_prompt(enhanced["enhanced_prompt"])
         
         # Extract improvements
         improvements = self._extract_improvements(analysis, enhanced)
@@ -108,11 +130,35 @@ Return ONLY valid JSON with these exact keys:
         """
         Generate an enhanced version of the prompt
         """
+        # Determine if role establishment is needed
+        needs_role, suggested_role = RoleDetector.needs_role(original, context)
+        complexity = RoleDetector.get_complexity_level(original)
+        
         system_message = f"""You are an expert prompt engineer optimizing prompts specifically for GPT-5 (2025 best practices).
 
-Create an enhanced prompt using STRUCTURED PROMPT SCAFFOLDING - the defensive prompting pattern that wraps inputs in guarded templates.
+PROMPT COMPLEXITY: {complexity}
+NEEDS ROLE: {needs_role}
+SUGGESTED ROLE: {suggested_role if suggested_role else 'None'}
 
-GPT-5 OPTIMIZATION REQUIREMENTS:
+Create an enhanced prompt based on complexity:
+
+FOR SIMPLE PROMPTS:
+- Keep it concise and direct
+- Add minimal scaffolding
+- Only add role if complexity warrants it
+- Focus on clarity over structure
+
+FOR MODERATE PROMPTS:
+- Add helpful structure
+- Include role if beneficial
+- Balance clarity with specificity
+
+FOR COMPLEX PROMPTS:
+- Use STRUCTURED PROMPT SCAFFOLDING
+- Include comprehensive role establishment
+- Add all safety boundaries
+
+GPT-5 OPTIMIZATION REQUIREMENTS (apply based on complexity):
 
 1. STRUCTURED SCAFFOLDING
    - Use ### section markers (### Instruction, ### Context, ### Evaluation)
@@ -176,10 +222,17 @@ Based on this analysis, create a much better, more specific prompt:
 - Issues: {', '.join(analysis.get('ambiguities', [])[:3])}
 - Missing: {', '.join(analysis.get('missing_elements', [])[:3])}
 
-For example, if the original is "write code for sorting", enhance it to something like:
-"Write a Python function that implements the quicksort algorithm to sort a list of integers in ascending order. Include type hints, docstring with usage example, and handle edge cases (empty list, single element). Return the sorted list."
+IMPORTANT: Apply enhancement based on complexity level ({complexity}):
+- SIMPLE: Keep enhancements minimal. Add clarity without over-engineering. {"No role needed." if not needs_role else f"Add role: {suggested_role}"}
+- MODERATE: Add helpful structure and specificity. Balance detail with conciseness.
+- COMPLEX: Apply full GPT-5 optimization with scaffolding, temporal anchoring, and comprehensive structure.
 
-Now enhance the original prompt."""
+For example:
+- Simple: "What's the capital of France?" → "What is the capital city of France?"
+- Moderate: "write code for sorting" → "Write a Python function that implements quicksort for sorting integers."
+- Complex: "build an app" → [Full scaffolded prompt with role, context, specifications, etc.]
+
+Now enhance the original prompt appropriately for its complexity level."""
         
         messages = [
             {"role": "system", "content": system_message},
@@ -327,3 +380,59 @@ Return ONLY a JSON object with keys: clarity, specificity, completeness, overall
         ))
         
         return improvements
+    
+    async def _generate_simple_enhancement(
+        self,
+        original: str,
+        context: PromptContext,
+        style: PromptStyle
+    ) -> Dict[str, Any]:
+        """
+        Generate a simple enhancement for basic prompts (single API call)
+        """
+        system_message = f"""You are a prompt enhancement assistant. Make simple, clear improvements to basic prompts.
+
+For simple prompts:
+- Add clarity without over-engineering
+- Fix obvious ambiguities
+- Keep the enhancement concise
+- Do NOT add complex scaffolding or roles unless absolutely necessary
+
+Context: {context} | Style: {style}
+
+Return ONLY valid JSON:
+{{
+  "enhanced_prompt": "The improved prompt text",
+  "explanation": "Brief explanation of the improvement",
+  "tips": ["Tip 1", "Tip 2"]
+}}"""
+        
+        user_message = f"""Improve this simple prompt: "{original}"
+
+Make it clearer and more specific, but keep it simple."""
+        
+        messages = [
+            {"role": "system", "content": system_message},
+            {"role": "user", "content": user_message}
+        ]
+        
+        response = await self.client.chat_completion(messages, temperature=0.3)
+        
+        try:
+            if "```json" in response:
+                json_str = response.split("```json")[1].split("```")[0].strip()
+            elif "{" in response and "}" in response:
+                start_idx = response.find("{")
+                end_idx = response.rfind("}") + 1
+                json_str = response[start_idx:end_idx]
+            else:
+                json_str = response
+            
+            return json.loads(json_str)
+        except:
+            # Fallback
+            return {
+                "enhanced_prompt": original + " (Please provide more specific details)",
+                "explanation": "Added request for more details",
+                "tips": ["Be more specific about your requirements"]
+            }

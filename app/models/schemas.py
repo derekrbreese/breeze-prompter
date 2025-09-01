@@ -66,3 +66,29 @@ class PromptResponse(BaseModel):
 class ErrorResponse(BaseModel):
     error: str = Field(..., description="Error message")
     detail: Optional[str] = Field(None, description="Detailed error information")
+
+
+class GPTPromptRequest(BaseModel):
+    """Simplified request for GPT custom actions"""
+    prompt: str = Field(..., description="The prompt to enhance")
+    document_context: Optional[str] = Field(
+        None,
+        description="Additional document context to consider when enhancing the prompt"
+    )
+    context: Optional[PromptContext] = Field(
+        default=PromptContext.GENERAL,
+        description="The domain context (coding, writing, analysis, etc.)"
+    )
+    style: Optional[PromptStyle] = Field(
+        default=PromptStyle.DETAILED,
+        description="Output style preference"
+    )
+    fetch_current_info: Optional[bool] = Field(
+        default=False,
+        description="Fetch current information for time-sensitive queries"
+    )
+
+
+class GPTPromptResponse(BaseModel):
+    """Simplified response for GPT custom actions - just the enhanced prompt"""
+    enhanced_prompt: str = Field(..., description="The enhanced, optimized prompt")

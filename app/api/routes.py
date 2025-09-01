@@ -1,5 +1,8 @@
 from fastapi import APIRouter, HTTPException
-from app.models import PromptRequest, PromptResponse, ErrorResponse
+from app.models import (
+    PromptRequest, PromptResponse, ErrorResponse,
+    GPTPromptRequest, GPTPromptResponse
+)
 from app.services import PromptEnhancer
 
 router = APIRouter()
@@ -41,6 +44,61 @@ async def perfect_prompt(request: PromptRequest) -> PromptResponse:
         
         response = await enhancer.enhance_prompt(request)
         return response
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error enhancing prompt: {str(e)}"
+        )
+
+
+@router.post(
+    "/gpt-enhance",
+    response_model=GPTPromptResponse,
+    responses={
+        400: {"model": ErrorResponse, "description": "Bad Request"},
+        500: {"model": ErrorResponse, "description": "Internal Server Error"}
+    },
+    summary="Enhance prompt for GPT (simplified)",
+    description="Simplified endpoint for GPT custom actions - returns only the enhanced prompt"
+)
+async def gpt_enhance_prompt(request: GPTPromptRequest) -> GPTPromptResponse:
+    """
+    Enhance a prompt for GPT custom actions.
+    
+    This endpoint is optimized for ChatGPT custom actions:
+    - Accepts document context for additional information
+    - Returns only the enhanced prompt (no metadata)
+    - Supports fetching current information for time-sensitive queries
+    """
+    try:
+        if not request.prompt or len(request.prompt.strip()) < 5:
+            raise HTTPException(
+                status_code=400,
+                detail="Prompt must be at least 5 characters long"
+            )
+        
+        # Combine prompt with document context if provided
+        full_prompt = request.prompt
+        if request.document_context:
+            full_prompt = f"Context: {request.document_context}\n\nPrompt: {request.prompt}"
+        
+        # Create a full request for the enhancer
+        full_request = PromptRequest(
+            prompt=full_prompt,
+            context=request.context,
+            style=request.style,
+            include_examples=False,
+            fetch_current_knowledge=request.fetch_current_info
+        )
+        
+        # Get the full response
+        full_response = await enhancer.enhance_prompt(full_request)
+        
+        # Return only the enhanced prompt
+        return GPTPromptResponse(enhanced_prompt=full_response.enhanced_prompt)
         
     except HTTPException:
         raise

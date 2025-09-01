@@ -49,15 +49,29 @@ An AI-powered service that analyzes and enhances prompts to make them more effec
 ## Features
 - **Prompt Analysis**: Identifies ambiguities, missing information, and areas for improvement
 - **Smart Enhancement**: Generates optimized versions with better clarity and specificity
+- **Document Context**: Supports additional context from documents for more accurate enhancements
 - **Scoring System**: Rates prompts on clarity, specificity, and completeness
 - **Context-Aware**: Tailors enhancements based on domain (coding, writing, analysis, etc.)
 - **Style Options**: Supports different output styles (concise, detailed, technical, conversational)
+- **GPT Custom Action Support**: Simplified endpoint for ChatGPT custom actions
+
+## Endpoints
+
+### For GPT Custom Actions
+- **POST `/api/gpt-enhance`**: Simplified endpoint that returns only the enhanced prompt
+  - Accepts document context for additional information
+  - Returns a single enhanced prompt string
+  - Perfect for ChatGPT custom actions
+
+### For Full Analysis
+- **POST `/api/perfect-prompt`**: Full analysis with scores and explanations
 
 ## Authentication
 API key required in header: `X-API-Key: your-api-key`
 
 ## Usage
-Send a POST request to `/api/perfect-prompt` with your prompt and optional parameters.
+For GPT custom actions, use `/api/gpt-enhance` to get just the enhanced prompt.
+For full analysis, use `/api/perfect-prompt` to get detailed feedback.
 """,
         routes=app.routes,
         servers=[

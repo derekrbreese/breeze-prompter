@@ -5,7 +5,9 @@ from .schemas import (
     Improvement,
     PromptScore,
     PromptContext,
-    PromptStyle
+    PromptStyle,
+    GPTPromptRequest,
+    GPTPromptResponse
 )
 
 __all__ = [
@@ -15,5 +17,7 @@ __all__ = [
     "Improvement",
     "PromptScore",
     "PromptContext",
-    "PromptStyle"
+    "PromptStyle",
+    "GPTPromptRequest",
+    "GPTPromptResponse"
 ]

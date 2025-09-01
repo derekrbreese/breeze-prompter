@@ -7,7 +7,7 @@ prompts specifically for next-generation models like GPT-5.
 """
 
 GPT5_OPTIMIZATION_PRINCIPLES = """
-# GPT-5 Prompt Engineering Principles
+# GPT-5 Prompt Engineering Principles (MoE Architecture)
 
 ## 1. REASONING TRANSPARENCY
 - Always request step-by-step reasoning chains
@@ -68,9 +68,25 @@ GPT5_OPTIMIZATION_PRINCIPLES = """
 - Specify acceptable latency/quality tradeoffs
 - Request streaming for long outputs
 - Enable early stopping criteria
+
+## 11. MoE-SPECIFIC OPTIMIZATIONS
+- Design for expert activation using domain-specific language
+- Decompose tasks to leverage multiple experts
+- Optimize for sparsity: Avoid over-general prompts
+- Include explicit routing hints
+- Request ensemble outputs from multiple experts
+- Chain expert activations for complex tasks
 """
 
 GPT5_PROMPT_TEMPLATE = """
+<EXPERT_ROUTING>
+{expert_hints}
+</EXPERT_ROUTING>
+
+<TASK_DECOMPOSITION>
+{sub_tasks}
+</TASK_DECOMPOSITION>
+
 <TASK_SPECIFICATION>
 {task_description}
 </TASK_SPECIFICATION>
@@ -106,6 +122,11 @@ Background (for reference only):
 - Suggest safer alternatives if concerns arise
 - Include disclaimers where appropriate
 </SAFETY_GUIDELINES>
+
+<ENSEMBLE_REQUIREMENTS>
+- Consult multiple experts
+- Combine their insights with confidence weighting
+</ENSEMBLE_REQUIREMENTS>
 
 <EXECUTION_INSTRUCTIONS>
 1. Parse and validate the task specification

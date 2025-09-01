@@ -7,11 +7,7 @@ from app.api import router
 app = FastAPI(
     title="Breeze Prompter API",
     description="An AI-powered prompt enhancement service that analyzes and improves prompts for maximum effectiveness",
-    version="1.0.0",
-    servers=[
-        {"url": "https://breeze-prompter.onrender.com", "description": "Production server"},
-        {"url": "http://localhost:8000", "description": "Development server"}
-    ]
+    version="1.0.0"
 )
 
 # Configure CORS for GPT custom actions
@@ -64,6 +60,11 @@ API key required in header: `X-API-Key: your-api-key`
 Send a POST request to `/api/perfect-prompt` with your prompt and optional parameters.
 """,
         routes=app.routes,
+        servers=[
+            {"url": "https://breeze-prompter.onrender.com", "description": "Production server (Render)"},
+            {"url": "http://localhost:8000", "description": "Development server"},
+            {"url": "http://localhost:8002", "description": "Alternative development server"}
+        ]
     )
     
     # Add security scheme for GPT custom actions

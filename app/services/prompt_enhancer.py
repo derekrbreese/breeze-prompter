@@ -15,8 +15,15 @@ from app.services.role_detector import RoleDetector
 
 class PromptEnhancer:
     def __init__(self):
-        self.client = OpenRouterClient()
+        # Lazy-init the OpenRouter client to avoid import-time failures
+        # when the API key is not present (e.g., health checks, docs).
+        self._client: Optional[OpenRouterClient] = None
         self.knowledge = SmartKnowledgeIntegration()
+
+    def _get_client(self) -> OpenRouterClient:
+        if self._client is None:
+            self._client = OpenRouterClient()
+        return self._client
     
     async def enhance_prompt(self, request: PromptRequest) -> PromptResponse:
         """
@@ -59,12 +66,13 @@ class PromptEnhancer:
                 score_before = PromptScore(clarity=70, specificity=65, completeness=60, overall=65)
                 score_after = PromptScore(clarity=85, specificity=80, completeness=80, overall=82)
         
-        # Integrate current knowledge if requested
+        # Integrate current knowledge if requested (force when requested)
         if request.fetch_current_knowledge:
             enhanced["enhanced_prompt"] = await self.knowledge.integrate_knowledge(
                 request.prompt,
                 enhanced["enhanced_prompt"],
-                request.context
+                request.context.value,
+                user_preference="always"
             )
         
         # Extract improvements
@@ -100,7 +108,7 @@ Return ONLY valid JSON with these exact keys:
             {"role": "user", "content": f"Context: {context}\nPrompt to analyze: {prompt}"}
         ]
         
-        response = await self.client.chat_completion(messages, temperature=0.3)
+        response = await self._get_client().chat_completion(messages, temperature=0.3)
         
         try:
             # Extract JSON from the response
@@ -239,7 +247,7 @@ Now enhance the original prompt appropriately for its complexity level."""
             {"role": "user", "content": user_message}
         ]
         
-        response = await self.client.chat_completion(messages, temperature=0.5)
+        response = await self._get_client().chat_completion(messages, temperature=0.5)
         
         try:
             # Try to extract JSON from the response
@@ -315,7 +323,7 @@ Return ONLY a JSON object with keys: clarity, specificity, completeness, overall
             {"role": "user", "content": prompt}
         ]
         
-        response = await self.client.chat_completion(messages, temperature=0.1)
+        response = await self._get_client().chat_completion(messages, temperature=0.1)
         
         try:
             if "```json" in response:
@@ -416,7 +424,7 @@ Make it clearer and more specific, but keep it simple."""
             {"role": "user", "content": user_message}
         ]
         
-        response = await self.client.chat_completion(messages, temperature=0.3)
+        response = await self._get_client().chat_completion(messages, temperature=0.3)
         
         try:
             if "```json" in response:

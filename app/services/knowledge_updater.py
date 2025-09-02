@@ -261,13 +261,14 @@ class SmartKnowledgeIntegration:
         self,
         prompt: str,
         enhanced_prompt: str,
-        context: str
+        context: str,
+        user_preference: Optional[str] = None,
     ) -> str:
         """
         Integrate current knowledge into the enhanced prompt
         """
         # Check if we should fetch
-        if not await self.should_enhance_with_knowledge(prompt, context):
+        if not await self.should_enhance_with_knowledge(prompt, context, user_preference=user_preference):
             return enhanced_prompt
             
         # Get current knowledge

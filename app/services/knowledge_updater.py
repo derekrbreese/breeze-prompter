@@ -5,6 +5,7 @@ Fetches current information to enhance prompts with up-to-date context
 """
 
 import httpx
+import os
 from typing import Dict, List, Optional, Any
 from datetime import datetime
 import json
@@ -67,7 +68,9 @@ class KnowledgeUpdater:
             # For production, you'd want to use a proper search API
             
             # Simplified search using httpx
-            async with httpx.AsyncClient(timeout=10.0) as client:
+            # Shorter timeout to avoid blocking the main request
+            ddg_timeout = float(os.getenv("DDG_TIMEOUT", "5"))
+            async with httpx.AsyncClient(timeout=ddg_timeout) as client:
                 # DuckDuckGo instant answer API
                 ddg_url = "https://api.duckduckgo.com/"
                 params = {

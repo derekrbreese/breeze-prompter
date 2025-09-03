@@ -1,4 +1,6 @@
 import json
+import time
+import logging
 from typing import List, Dict, Any, Optional
 from app.utils import OpenRouterClient
 from app.models import (
@@ -19,6 +21,7 @@ class PromptEnhancer:
         # when the API key is not present (e.g., health checks, docs).
         self._client: Optional[OpenRouterClient] = None
         self.knowledge = SmartKnowledgeIntegration()
+        self._logger = logging.getLogger("enhancer")
 
     def _get_client(self) -> OpenRouterClient:
         if self._client is None:
@@ -29,6 +32,7 @@ class PromptEnhancer:
         """
         Main method to enhance a prompt using AI
         """
+        start_total = time.perf_counter()
         # Check complexity level to optimize API calls
         complexity = RoleDetector.get_complexity_level(request.prompt)
         
@@ -46,9 +50,13 @@ class PromptEnhancer:
             score_after = PromptScore(clarity=90, specificity=85, completeness=85, overall=87)
         else:
             # Full analysis for moderate/complex prompts
+            t = time.perf_counter()
             analysis = await self._analyze_prompt(request.prompt, request.context)
+            if self._logger:
+                self._logger.debug("analyze_prompt duration_ms=%.1f", (time.perf_counter() - t) * 1000)
             
             # Generate the enhanced prompt
+            t = time.perf_counter()
             enhanced = await self._generate_enhanced_prompt(
                 request.prompt,
                 analysis,
@@ -56,11 +64,16 @@ class PromptEnhancer:
                 request.style,
                 request.include_examples
             )
+            if self._logger:
+                self._logger.debug("generate_enhanced_prompt duration_ms=%.1f", (time.perf_counter() - t) * 1000)
             
             # Score both prompts only for complex cases
             if complexity == "complex":
+                t = time.perf_counter()
                 score_before = await self._score_prompt(request.prompt)
                 score_after = await self._score_prompt(enhanced["enhanced_prompt"])
+                if self._logger:
+                    self._logger.debug("score_prompts duration_ms=%.1f", (time.perf_counter() - t) * 1000)
             else:
                 # Estimated scores for moderate complexity
                 score_before = PromptScore(clarity=70, specificity=65, completeness=60, overall=65)
@@ -78,6 +91,9 @@ class PromptEnhancer:
         # Extract improvements
         improvements = self._extract_improvements(analysis, enhanced)
         
+        if self._logger:
+            self._logger.debug("enhance_prompt total_duration_ms=%.1f", (time.perf_counter() - start_total) * 1000)
+
         return PromptResponse(
             original_prompt=request.prompt,
             enhanced_prompt=enhanced["enhanced_prompt"],
@@ -108,7 +124,7 @@ Return ONLY valid JSON with these exact keys:
             {"role": "user", "content": f"Context: {context}\nPrompt to analyze: {prompt}"}
         ]
         
-        response = await self._get_client().chat_completion(messages, temperature=0.3)
+        response = await self._get_client().chat_completion(messages, temperature=0.3, max_tokens=256)
         
         try:
             # Extract JSON from the response
@@ -247,7 +263,7 @@ Now enhance the original prompt appropriately for its complexity level."""
             {"role": "user", "content": user_message}
         ]
         
-        response = await self._get_client().chat_completion(messages, temperature=0.5)
+        response = await self._get_client().chat_completion(messages, temperature=0.5, max_tokens=512)
         
         try:
             # Try to extract JSON from the response
@@ -323,7 +339,7 @@ Return ONLY a JSON object with keys: clarity, specificity, completeness, overall
             {"role": "user", "content": prompt}
         ]
         
-        response = await self._get_client().chat_completion(messages, temperature=0.1)
+        response = await self._get_client().chat_completion(messages, temperature=0.1, max_tokens=192)
         
         try:
             if "```json" in response:
@@ -498,3 +514,65 @@ Requirements:
 - Be specific and thorough in your response"""
         
         return enhanced
+
+    async def enhance_prompt_fast(
+        self,
+        prompt: str,
+        context: PromptContext,
+        style: PromptStyle,
+        include_examples: bool = False,
+    ) -> Dict[str, Any]:
+        """
+        Fast single-call enhancement optimized for GPT custom actions.
+        Skips separate analysis/scoring; returns minimal JSON.
+        """
+        system_message = f"""You are a prompt enhancement assistant. Improve the user's prompt.
+
+Return ONLY compact JSON with keys: enhanced_prompt, explanation, tips
+Ensure clarity and specificity. Tailor to context={context} style={style}.
+If include_examples is true, add 1-2 short examples INSIDE the enhanced prompt.
+"""
+
+        user_message = f"""Original: {prompt}
+
+Please produce an improved prompt suitable for direct use. Keep it concise.
+"""
+
+        messages = [
+            {"role": "system", "content": system_message},
+            {"role": "user", "content": user_message},
+        ]
+
+        t = time.perf_counter()
+        response = await self._get_client().chat_completion(
+            messages,
+            temperature=0.3,
+            max_tokens=384,
+        )
+        if self._logger:
+            self._logger.debug("enhance_prompt_fast llm_duration_ms=%.1f", (time.perf_counter() - t) * 1000)
+
+        try:
+            if "```json" in response:
+                json_str = response.split("```json")[1].split("```")[0].strip()
+            elif "{" in response and "}" in response:
+                start = response.index("{")
+                end = response.rindex("}") + 1
+                json_str = response[start:end]
+            else:
+                json_str = response
+
+            result = json.loads(json_str)
+            if not result.get("enhanced_prompt"):
+                result["enhanced_prompt"] = prompt
+            if not result.get("explanation"):
+                result["explanation"] = "Improved clarity and specificity."
+            if not result.get("tips"):
+                result["tips"] = []
+            return result
+        except Exception:
+            return {
+                "enhanced_prompt": prompt + " (clarify requirements, constraints, and desired output)",
+                "explanation": "Added specificity and structure.",
+                "tips": ["State language/format", "Provide an example", "List constraints"],
+            }

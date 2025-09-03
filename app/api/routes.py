@@ -1,4 +1,5 @@
 from fastapi import APIRouter, HTTPException
+import time
 from app.models import (
     PromptRequest, PromptResponse, ErrorResponse,
     GPTPromptRequest, GPTPromptResponse
@@ -74,6 +75,7 @@ async def gpt_enhance_prompt(request: GPTPromptRequest) -> GPTPromptResponse:
     - Supports fetching current information for time-sensitive queries
     """
     try:
+        t_total = time.perf_counter()
         if not request.prompt or len(request.prompt.strip()) < 5:
             raise HTTPException(
                 status_code=400,
@@ -83,28 +85,34 @@ async def gpt_enhance_prompt(request: GPTPromptRequest) -> GPTPromptResponse:
         # Handle document context intelligently
         if request.document_context:
             # For prompts with document context, create a focused enhancement
+            t = time.perf_counter()
             enhanced_prompt = await enhancer.enhance_with_document(
                 prompt=request.prompt,
                 document=request.document_context,
                 context=request.context,
                 style=request.style
             )
+            # Best-effort timing log to stdout (keeps dependencies minimal)
+            try:
+                print(f"[gpt-enhance] doc_mode duration_ms={(time.perf_counter()-t)*1000:.1f}")
+            except Exception:
+                pass
             return GPTPromptResponse(enhanced_prompt=enhanced_prompt)
         
         # For regular prompts without documents
-        full_request = PromptRequest(
+        # Use the fast single-call path to minimize latency for GPT Actions
+        t = time.perf_counter()
+        fast = await enhancer.enhance_prompt_fast(
             prompt=request.prompt,
             context=request.context,
             style=request.style,
             include_examples=False,
-            fetch_current_knowledge=request.fetch_current_info
         )
-        
-        # Get the full response
-        full_response = await enhancer.enhance_prompt(full_request)
-        
-        # Return only the enhanced prompt
-        return GPTPromptResponse(enhanced_prompt=full_response.enhanced_prompt)
+        try:
+            print(f"[gpt-enhance] fast_mode duration_ms={(time.perf_counter()-t)*1000:.1f}")
+        except Exception:
+            pass
+        return GPTPromptResponse(enhanced_prompt=fast.get("enhanced_prompt", request.prompt))
         
     except HTTPException:
         raise

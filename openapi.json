@@ -19,17 +19,39 @@
             "description": "Alternative development server"
         }
     ],
+    "tags": [
+        {
+            "name": "GPT Actions",
+            "description": "Endpoints optimized for ChatGPT Custom Actions"
+        },
+        {
+            "name": "Analysis",
+            "description": "Full prompt analysis endpoints"
+        },
+        {
+            "name": "System",
+            "description": "Operational and health endpoints"
+        }
+    ],
     "paths": {
         "/api/perfect-prompt": {
             "post": {
                 "summary": "Perfect a prompt",
                 "description": "Analyzes and enhances a prompt to make it more effective for AI systems",
-                "operationId": "perfect_prompt_api_perfect_prompt_post",
+                "tags": ["Analysis"],
+                "operationId": "perfectPrompt",
                 "requestBody": {
                     "content": {
                         "application/json": {
                             "schema": {
                                 "$ref": "#/components/schemas/PromptRequest"
+                            },
+                            "example": {
+                                "prompt": "Write a Python function to reverse a string.",
+                                "context": "coding",
+                                "style": "detailed",
+                                "include_examples": false,
+                                "fetch_current_knowledge": false
                             }
                         }
                     },
@@ -42,6 +64,35 @@
                             "application/json": {
                                 "schema": {
                                     "$ref": "#/components/schemas/PromptResponse"
+                                },
+                                "example": {
+                                    "original_prompt": "Write a Python function to reverse a string.",
+                                    "enhanced_prompt": "You are a helpful Python assistant. Task: Implement a function reverse_string(s: str) -> str that returns the reversed input string. Requirements: handle empty strings; preserve whitespace and punctuation; include 3 doctest-style examples including an empty string, a single-word string, and a sentence with punctuation.",
+                                    "improvements": [
+                                        {
+                                            "category": "Specificity",
+                                            "description": "Added explicit function signature and requirements",
+                                            "before": "",
+                                            "after": "Implement reverse_string(s: str) -> str"
+                                        }
+                                    ],
+                                    "explanation": "The enhanced prompt clarifies the task, provides a signature, and adds testable examples.",
+                                    "score_before": {
+                                        "clarity": 55,
+                                        "specificity": 40,
+                                        "completeness": 45,
+                                        "overall": 47
+                                    },
+                                    "score_after": {
+                                        "clarity": 92,
+                                        "specificity": 90,
+                                        "completeness": 88,
+                                        "overall": 90
+                                    },
+                                    "tips": [
+                                        "State explicit inputs/outputs",
+                                        "Add constraints and examples"
+                                    ]
                                 }
                             }
                         }
@@ -88,12 +139,20 @@
             "post": {
                 "summary": "Enhance prompt for GPT (simplified)",
                 "description": "Simplified endpoint for GPT custom actions - returns only the enhanced prompt",
-                "operationId": "gpt_enhance_prompt_api_gpt_enhance_post",
+                "tags": ["GPT Actions"],
+                "operationId": "gptEnhancePrompt",
                 "requestBody": {
                     "content": {
                         "application/json": {
                             "schema": {
                                 "$ref": "#/components/schemas/GPTPromptRequest"
+                            },
+                            "example": {
+                                "prompt": "Summarize the attached report for an executive audience.",
+                                "document_context": "Report: 2024 Q2 performance...",
+                                "context": "analysis",
+                                "style": "concise",
+                                "fetch_current_info": false
                             }
                         }
                     },
@@ -106,6 +165,9 @@
                             "application/json": {
                                 "schema": {
                                     "$ref": "#/components/schemas/GPTPromptResponse"
+                                },
+                                "example": {
+                                    "enhanced_prompt": "You are a concise analyst. Task: Summarize the 2024 Q2 performance report for executives. Include: topline revenue and growth vs Q1; key wins/losses; 2-3 risks; 2 actionable recommendations. Keep under 120 words."
                                 }
                             }
                         }
@@ -152,13 +214,24 @@
             "get": {
                 "summary": "Health check",
                 "description": "Check if the API is running",
-                "operationId": "health_check_api_health_get",
+                "tags": ["System"],
+                "operationId": "healthCheck",
                 "responses": {
                     "200": {
                         "description": "Successful Response",
                         "content": {
                             "application/json": {
-                                "schema": {}
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "status": { "type": "string" },
+                                        "service": { "type": "string" }
+                                    }
+                                },
+                                "example": {
+                                    "status": "healthy",
+                                    "service": "Breeze Prompter API"
+                                }
                             }
                         }
                     }
@@ -173,13 +246,30 @@
         "/": {
             "get": {
                 "summary": "Root",
-                "operationId": "root__get",
+                "tags": ["System"],
+                "operationId": "root",
                 "responses": {
                     "200": {
                         "description": "Successful Response",
                         "content": {
                             "application/json": {
-                                "schema": {}
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "name": { "type": "string" },
+                                        "version": { "type": "string" },
+                                        "description": { "type": "string" },
+                                        "documentation": { "type": "string" },
+                                        "openapi": { "type": "string" }
+                                    }
+                                },
+                                "example": {
+                                    "name": "Breeze Prompter API",
+                                    "version": "1.0.0",
+                                    "description": "AI-powered prompt enhancement service",
+                                    "documentation": "/docs",
+                                    "openapi": "/openapi.json"
+                                }
                             }
                         }
                     }
@@ -282,7 +372,14 @@
                     "prompt"
                 ],
                 "title": "GPTPromptRequest",
-                "description": "Simplified request for GPT custom actions"
+                "description": "Simplified request for GPT custom actions",
+                "example": {
+                    "prompt": "Summarize the main arguments of the attached document.",
+                    "document_context": "Paper: Large Language Models are changing...",
+                    "context": "analysis",
+                    "style": "concise",
+                    "fetch_current_info": false
+                }
             },
             "GPTPromptResponse": {
                 "properties": {
@@ -297,7 +394,10 @@
                     "enhanced_prompt"
                 ],
                 "title": "GPTPromptResponse",
-                "description": "Simplified response for GPT custom actions - just the enhanced prompt"
+                "description": "Simplified response for GPT custom actions - just the enhanced prompt",
+                "example": {
+                    "enhanced_prompt": "You are a concise analyst. Task: Summarize the document for executives in under 120 words, covering topline metrics, key drivers, and 2 risks."
+                }
             },
             "HTTPValidationError": {
                 "properties": {
@@ -430,7 +530,14 @@
                 "required": [
                     "prompt"
                 ],
-                "title": "PromptRequest"
+                "title": "PromptRequest",
+                "example": {
+                    "prompt": "Draft an email to request a product demo.",
+                    "context": "writing",
+                    "style": "conversational",
+                    "include_examples": false,
+                    "fetch_current_knowledge": false
+                }
             },
             "PromptResponse": {
                 "properties": {
@@ -490,7 +597,18 @@
                     "score_before",
                     "score_after"
                 ],
-                "title": "PromptResponse"
+                "title": "PromptResponse",
+                "example": {
+                    "original_prompt": "Draft an email to request a product demo.",
+                    "enhanced_prompt": "You are a professional sales rep. Draft a concise outreach email requesting a 30-minute product demo. Include: a friendly greeting, a one-sentence value proposition tailored to the recipient, 2 time slots next week, and a polite call-to-action. Keep under 120 words.",
+                    "improvements": [
+                        {"category": "Clarity", "description": "Specified clear CTA"}
+                    ],
+                    "explanation": "Clarifies audience, constraints, and action, making it immediately actionable.",
+                    "score_before": {"clarity": 60, "specificity": 50, "completeness": 55, "overall": 55},
+                    "score_after": {"clarity": 92, "specificity": 90, "completeness": 88, "overall": 90},
+                    "tips": ["State explicit goal", "Limit length", "Offer options"]
+                }
             },
             "PromptScore": {
                 "properties": {

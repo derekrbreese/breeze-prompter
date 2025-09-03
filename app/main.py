@@ -15,7 +15,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=["https://chat.openai.com", "*"],  # Allow ChatGPT and all origins for dev
     allow_credentials=True,
-    allow_methods=["GET", "POST"],
+    allow_methods=["GET", "POST", "OPTIONS"],
     allow_headers=["*"],
 )
 
@@ -81,6 +81,13 @@ For full analysis, use `/api/perfect-prompt` to get detailed feedback.
         ]
     )
     
+    # Add top-level tags for clearer grouping in GPT Actions
+    openapi_schema["tags"] = [
+        {"name": "GPT Actions", "description": "Endpoints optimized for ChatGPT Custom Actions"},
+        {"name": "Analysis", "description": "Full prompt analysis endpoints"},
+        {"name": "System", "description": "Operational and health endpoints"},
+    ]
+
     # Add security scheme for GPT custom actions
     openapi_schema["components"]["securitySchemes"] = {
         "ApiKeyAuth": {
@@ -95,6 +102,156 @@ For full analysis, use `/api/perfect-prompt` to get detailed feedback.
         for operation in path.values():
             if isinstance(operation, dict):
                 operation["security"] = [{"ApiKeyAuth": []}]
+
+    # Enhance operationIds, tags, and add media examples to help GPT Actions
+    paths = openapi_schema.get("paths", {})
+
+    # /api/perfect-prompt (POST)
+    perfect = paths.get("/api/perfect-prompt", {}).get("post")
+    if isinstance(perfect, dict):
+        perfect["operationId"] = "perfectPrompt"
+        perfect["tags"] = ["Analysis"]
+        # Request example
+        try:
+            media = (
+                perfect
+                .get("requestBody", {})
+                .get("content", {})
+                .get("application/json", {})
+            )
+            if isinstance(media, dict):
+                media["example"] = {
+                    "prompt": "Write a Python function to reverse a string.",
+                    "context": "coding",
+                    "style": "detailed",
+                    "include_examples": False,
+                    "fetch_current_knowledge": False,
+                }
+        except Exception:
+            pass
+        # Response example
+        try:
+            media = (
+                perfect
+                .get("responses", {})
+                .get("200", {})
+                .get("content", {})
+                .get("application/json", {})
+            )
+            if isinstance(media, dict):
+                media["example"] = {
+                    "original_prompt": "Write a Python function to reverse a string.",
+                    "enhanced_prompt": "You are a helpful Python assistant. Task: Implement a function reverse_string(s: str) -> str that returns the reversed input string. Requirements: handle empty strings; preserve whitespace and punctuation; include 3 doctest-style examples including an empty string, a single-word string, and a sentence with punctuation.",
+                    "improvements": [
+                        {
+                            "category": "Specificity",
+                            "description": "Added explicit function signature and requirements",
+                            "before": "",
+                            "after": "Implement reverse_string(s: str) -> str",
+                        }
+                    ],
+                    "explanation": "The enhanced prompt clarifies the task, provides a signature, and adds testable examples.",
+                    "score_before": {"clarity": 55, "specificity": 40, "completeness": 45, "overall": 47},
+                    "score_after": {"clarity": 92, "specificity": 90, "completeness": 88, "overall": 90},
+                    "tips": ["State explicit inputs/outputs", "Add constraints and examples"],
+                }
+        except Exception:
+            pass
+
+    # /api/gpt-enhance (POST)
+    gpt = paths.get("/api/gpt-enhance", {}).get("post")
+    if isinstance(gpt, dict):
+        gpt["operationId"] = "gptEnhancePrompt"
+        gpt["tags"] = ["GPT Actions"]
+        # Request example
+        try:
+            media = (
+                gpt
+                .get("requestBody", {})
+                .get("content", {})
+                .get("application/json", {})
+            )
+            if isinstance(media, dict):
+                media["example"] = {
+                    "prompt": "Summarize the attached report for an executive audience.",
+                    "document_context": "Report: 2024 Q2 performance...",
+                    "context": "analysis",
+                    "style": "concise",
+                    "fetch_current_info": False,
+                }
+        except Exception:
+            pass
+        # Response example
+        try:
+            media = (
+                gpt
+                .get("responses", {})
+                .get("200", {})
+                .get("content", {})
+                .get("application/json", {})
+            )
+            if isinstance(media, dict):
+                media["example"] = {
+                    "enhanced_prompt": "You are a concise analyst. Task: Summarize the 2024 Q2 performance report for executives. Include: topline revenue and growth vs Q1; key wins/losses; 2-3 risks; 2 actionable recommendations. Keep under 120 words.",
+                }
+        except Exception:
+            pass
+
+    # /api/health (GET)
+    health = paths.get("/api/health", {}).get("get")
+    if isinstance(health, dict):
+        health["operationId"] = "healthCheck"
+        health["tags"] = ["System"]
+        try:
+            media = (
+                health
+                .get("responses", {})
+                .get("200", {})
+                .get("content", {})
+                .get("application/json", {})
+            )
+            if isinstance(media, dict):
+                media.setdefault("schema", {"type": "object", "properties": {"status": {"type": "string"}, "service": {"type": "string"}}})
+                media["example"] = {"status": "healthy", "service": "Breeze Prompter API"}
+        except Exception:
+            pass
+
+    # / (GET)
+    root = paths.get("/", {}).get("get")
+    if isinstance(root, dict):
+        root["operationId"] = "root"
+        root["tags"] = ["System"]
+        try:
+            media = (
+                root
+                .get("responses", {})
+                .get("200", {})
+                .get("content", {})
+                .get("application/json", {})
+            )
+            if isinstance(media, dict):
+                media.setdefault(
+                    "schema",
+                    {
+                        "type": "object",
+                        "properties": {
+                            "name": {"type": "string"},
+                            "version": {"type": "string"},
+                            "description": {"type": "string"},
+                            "documentation": {"type": "string"},
+                            "openapi": {"type": "string"},
+                        },
+                    },
+                )
+                media["example"] = {
+                    "name": "Breeze Prompter API",
+                    "version": "1.0.0",
+                    "description": "AI-powered prompt enhancement service",
+                    "documentation": "/docs",
+                    "openapi": "/openapi.json",
+                }
+        except Exception:
+            pass
     
     app.openapi_schema = openapi_schema
     return app.openapi_schema
